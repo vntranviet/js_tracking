@@ -1,4 +1,4 @@
-<script>  // chuyển tiếp * các tham số trên domain Ladipage: GCLID, GBRAID, WBRAID
+ // chuyển tiếp * các tham số trên domain Ladipage: GCLID, GBRAID, WBRAID
 
 function getAllURLParameters() {
     const params = new URLSearchParams(window.location.search);
@@ -31,4 +31,4 @@ function appendParametersToAllLinks() {
     });
 }
 document.addEventListener('DOMContentLoaded', appendParametersToAllLinks);
-  </script>
+
