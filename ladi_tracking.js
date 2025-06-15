@@ -1,4 +1,4 @@
-<!-----------------------------g------------------------->
+<!----------------- chuyển tiếp các tham số trên domain ------------------------->
 <script>
 function getAllURLParameters() {
     const params = new URLSearchParams(window.location.search);
