@@ -1,5 +1,5 @@
-<!----------------- chuyển tiếp các tham số trên domain ------------------------->
-<script>
+<script>  // chuyển tiếp * các tham số trên domain Ladipage: GCLID, GBRAID, WBRAID
+
 function getAllURLParameters() {
     const params = new URLSearchParams(window.location.search);
     return params;
