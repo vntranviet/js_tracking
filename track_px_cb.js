@@ -1,17 +1,25 @@
-// Tracking script - Version 2.0 (9h34-20.6.25)
-(function() {
-    // Cấu hình
+(function TrackingInit(window, document) {
+    'use strict';
+
     var CONFIG = {
-        API_URL: 'https://example.com/api/track',
+        TRACKING_URL: window.TRACKING_URL || '',
         TRACKING_PARAMS: ['gclid', 'gbraid', 'wbraid', 'fbclid', 'ttclid', 'ref'],
-        RETRY_COUNT: 3,
-        RETRY_DELAY: 2000,
-        STORAGE_KEY: '_tracking_data',
-        STORAGE_EXPIRY: 30 * 24 * 60 * 60 * 1000 // 30 ngày
+        UTM_PARAMS: {
+            'utm_source': 'traffic_source',
+            'utm_medium': 'traffic_type',
+            'utm_campaign': 'campaign',
+            'utm_term': 'creative',
+            'utm_content': 'ad'
+        },
+        RETRY_INTERVAL: 30 * 60 * 1000, // 30 phút
+        DATA_RETENTION: 7 * 24 * 60 * 60 * 1000 // 7 ngày
     };
 
-    // Các tiện ích
     var Utils = {
+        isValidValue: function(value) {
+            return value && typeof value === 'string' && value.trim().length > 0;
+        },
+
         getQueryParams: function() {
             try {
                 var params = {};
@@ -28,224 +36,271 @@
                 return {};
             }
         },
-        
-        isValidValue: function(value) {
-            return value && typeof value === 'string' && value.trim().length > 0;
-        },
-        
-        generateUniqueId: function() {
-            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-        },
-        
-        getDeviceInfo: function() {
-            var ua = navigator.userAgent;
-            var device = /Mobile|Android|iPhone|iPad|iPod|Windows Phone/i.test(ua) ? 'mobile' : 'desktop';
-            
-            var browser = 'other';
-            if (/Chrome/i.test(ua)) browser = 'chrome';
-            else if (/Firefox/i.test(ua)) browser = 'firefox';
-            else if (/Safari/i.test(ua)) browser = 'safari';
-            else if (/MSIE|Trident/i.test(ua)) browser = 'ie';
-            else if (/Edge/i.test(ua)) browser = 'edge';
-            
-            return {
-                device: device,
-                browser: browser,
-                userAgent: ua
-            };
-        },
-        
-        storeData: function(data) {
-            try {
-                var storageData = {
-                    data: data,
-                    expiry: Date.now() + CONFIG.STORAGE_EXPIRY
-                };
-                localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(storageData));
-                return true;
-            } catch (e) {
-                return false;
-            }
-        },
-        
-        retrieveData: function() {
-            try {
-                var storageData = JSON.parse(localStorage.getItem(CONFIG.STORAGE_KEY));
-                if (storageData && storageData.expiry > Date.now()) {
-                    return storageData.data;
-                }
-                return null;
-            } catch (e) {
-                return null;
-            }
-        },
-        
-        calculateChecksum: function(data) {
-            // Đơn giản hóa: Sử dụng tổng các mã ASCII của chuỗi JSON
-            var json = JSON.stringify(data);
-            var sum = 0;
-            for (var i = 0; i < json.length; i++) {
-                sum += json.charCodeAt(i);
-            }
-            return sum.toString(16);
-        }
-    };
 
-    // Xử lý tracking
-    var Tracker = {
-        init: function() {
-            // Lấy tham số từ URL
-            var params = Utils.getQueryParams();
-            
-            // Lấy thông tin thiết bị
-            var deviceInfo = Utils.getDeviceInfo();
-            
-            // Xác định trackingParam một cách rõ ràng
-            var trackingParam;
-            
-            // THAY ĐỔI: Xác định trackingParam một cách rõ ràng
-            if (params.gclid && Utils.isValidValue(params.gclid)) {
-                trackingParam = params.gclid;
-                console.log('Tracking với gclid:', trackingParam);
-            } else if (params.gbraid && Utils.isValidValue(params.gbraid)) {
-                trackingParam = params.gbraid;
-                console.log('Tracking với gbraid:', trackingParam);
-            } else if (params.wbraid && Utils.isValidValue(params.wbraid)) {
-                trackingParam = params.wbraid;
-                console.log('Tracking với wbraid:', trackingParam);
-            } else if (params.fbclid && Utils.isValidValue(params.fbclid)) {
-                trackingParam = params.fbclid;
-                console.log('Tracking với fbclid:', trackingParam);
-            } else if (params.ttclid && Utils.isValidValue(params.ttclid)) {
-                trackingParam = params.ttclid;
-                console.log('Tracking với ttclid:', trackingParam);
-            } else if (params.ref && Utils.isValidValue(params.ref)) {
-                trackingParam = params.ref;
-                console.log('Tracking với ref:', trackingParam);
-            } else {
-                trackingParam = Utils.generateUniqueId();
-                console.log('Không có tham số tracking, tạo ID mới:', trackingParam);
+        getFirstValidParam: function(params, paramList) {
+            for (var i = 0; i < paramList.length; i++) {
+                var value = params[paramList[i]];
+                if (Utils.isValidValue(value)) return value;
             }
-            
-            // Lưu trữ dữ liệu tracking
-            var trackingData = {
-                trackingParam: trackingParam,
-                params: params,
-                timestamp: Date.now(),
-                deviceInfo: deviceInfo,
-                url: window.location.href
-            };
-            
-            // Lưu vào localStorage
-            Utils.storeData(trackingData);
-            
-            // Gửi dữ liệu tracking
-            this.sendTrackingData(trackingData);
-            
-            // Đăng ký sự kiện beforeunload để gửi dữ liệu khi người dùng rời trang
-            var self = this;
-            window.addEventListener('beforeunload', function() {
-                self.sendBeacon(trackingData);
-            });
+            return '';
         },
-        
-        sendTrackingData: function(trackingData, retryCount) {
-            var self = this;
-            retryCount = retryCount || 0;
-            
-            // Chuẩn bị dữ liệu để gửi
-            var urlParams = new URLSearchParams();
-            
-            // Thêm các tham số cơ bản
-            var offer = window.location.hostname || 'unknown';
-            urlParams.append('tid', offer);
-            urlParams.append('extclid', trackingData.trackingParam);
-            
-            // THAY ĐỔI: Gán giá trị cho aff_sub1 từ trackingParam đã xác định rõ ràng
-            urlParams.append('aff_sub1', trackingData.trackingParam);
-            
-            // Thêm các tham số theo yêu cầu
-            if (trackingData.params.gclid) urlParams.append('aff_sub2', trackingData.params.gclid);
-            if (trackingData.params.gbraid) urlParams.append('aff_sub3', trackingData.params.gbraid);
-            if (trackingData.params.wbraid) urlParams.append('aff_sub4', trackingData.params.wbraid);
-            
-            // Thêm các tham số UTM
-            if (trackingData.params.utm_source) urlParams.append('utm_source', trackingData.params.utm_source);
-            if (trackingData.params.utm_medium) urlParams.append('utm_medium', trackingData.params.utm_medium);
-            if (trackingData.params.utm_campaign) urlParams.append('utm_campaign', trackingData.params.utm_campaign);
-            if (trackingData.params.utm_term) urlParams.append('utm_term', trackingData.params.utm_term);
-            if (trackingData.params.utm_content) urlParams.append('utm_content', trackingData.params.utm_content);
-            
-            // Thêm thông tin thiết bị
-            urlParams.append('device', trackingData.deviceInfo.device);
-            urlParams.append('browser', trackingData.deviceInfo.browser);
-            
-            // Thêm timestamp và checksum
-            urlParams.append('timestamp', trackingData.timestamp);
-            urlParams.append('checksum', Utils.calculateChecksum(trackingData));
-            
-            // Log dữ liệu để debug
-            console.log('Sending tracking data:');
-            console.log('aff_sub1:', urlParams.get('aff_sub1'));
-            console.log('aff_sub3:', urlParams.get('aff_sub3'));
-            
-            // Gửi dữ liệu qua AJAX
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', CONFIG.API_URL, true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            
-            xhr.onload = function() {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                    console.log('Tracking data sent successfully');
-                } else {
-                    console.error('Failed to send tracking data. Status:', xhr.status);
+
+        sanitizeString: function(str) {
+            if (!str) return '';
+            return str
+                .toLowerCase()
+                .replace(/[^a-z0-9_]+/g, '_')
+                .replace(/^_+|_+$/g, '')
+                .replace(/_{2,}/g, '_');
+        },
+
+        generateUniqueId: function() {
+            return 'px_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+        },
+
+        getDeviceType: function() {
+            var ua = navigator.userAgent;
+            if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) {
+                return 'tablet';
+            }
+            if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) {
+                return 'mobile';
+            }
+            return 'desktop';
+        },
+
+        getBrowser: function() {
+            var ua = navigator.userAgent;
+            if (ua.indexOf('Chrome') > -1) return 'chrome';
+            if (ua.indexOf('Firefox') > -1) return 'firefox';
+            if (ua.indexOf('Safari') > -1) return 'safari';
+            if (ua.indexOf('MSIE') > -1 || ua.indexOf('Trident') > -1) return 'ie';
+            if (ua.indexOf('Edge') > -1) return 'edge';
+            return 'other';
+        },
+
+        hashData: function(data) {
+            var hash = 0;
+            if (data.length === 0) return hash;
+            for (var i = 0; i < data.length; i++) {
+                var char = data.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return hash.toString(36);
+        },
+
+        storeTrackingData: function(data) {
+            try {
+                var stored = JSON.parse(localStorage.getItem('tracking_data') || '[]');
+                stored.push({
+                    data: data,
+                    timestamp: Date.now(),
+                    sent: false
+                });
+                localStorage.setItem('tracking_data', JSON.stringify(stored));
+            } catch (e) {
+                console.error('Failed to store tracking data:', e);
+            }
+        },
+
+        sendStoredData: function() {
+            try {
+                var stored = JSON.parse(localStorage.getItem('tracking_data') || '[]');
+                var updated = [];
+                
+                for (var i = 0; i < stored.length; i++) {
+                    var item = stored[i];
                     
-                    // Thử lại nếu chưa đạt số lần thử tối đa
-                    if (retryCount < CONFIG.RETRY_COUNT) {
-                        setTimeout(function() {
-                            self.sendTrackingData(trackingData, retryCount + 1);
-                        }, CONFIG.RETRY_DELAY);
+                    // Chỉ thử lại nếu chưa gửi hoặc đã quá thời gian retry
+                    var shouldRetry = !item.sent || 
+                                     (item.retryCount < 3 && 
+                                      Date.now() - item.retryTime > CONFIG.RETRY_INTERVAL);
+                    
+                    if (shouldRetry) {
+                        // Tạo và gửi pixel
+                        var img = new Image();
+                        img.src = window.TRACKING_URL + '?' + item.data + '&retry=' + (item.retryCount || 0);
+                        
+                        item.sent = true;
+                        item.retryTime = Date.now();
+                        item.retryCount = (item.retryCount || 0) + 1;
+                    }
+                    
+                    // Giữ lại dữ liệu trong thời gian quy định
+                    if (Date.now() - item.timestamp < CONFIG.DATA_RETENTION) {
+                        updated.push(item);
                     }
                 }
-            };
-            
-            xhr.onerror = function() {
-                console.error('Error sending tracking data');
                 
-                // Thử lại nếu chưa đạt số lần thử tối đa
-                if (retryCount < CONFIG.RETRY_COUNT) {
-                    setTimeout(function() {
-                        self.sendTrackingData(trackingData, retryCount + 1);
-                    }, CONFIG.RETRY_DELAY);
-                }
-            };
-            
-            xhr.send(urlParams.toString());
+                localStorage.setItem('tracking_data', JSON.stringify(updated));
+            } catch (e) {
+                console.error('Failed to send stored tracking data:', e);
+            }
         },
-        
-        sendBeacon: function(trackingData) {
-            // Sử dụng Beacon API để gửi dữ liệu khi người dùng rời trang
+
+        useBeaconIfAvailable: function(url, data) {
             if (navigator.sendBeacon) {
-                var urlParams = new URLSearchParams();
-                urlParams.append('tid', window.location.hostname || 'unknown');
-                urlParams.append('extclid', trackingData.trackingParam);
-                urlParams.append('event', 'exit');
-                urlParams.append('timestamp', Date.now());
+                // Tạo FormData để gửi dữ liệu
+                var formData = new FormData();
+                var params = new URLSearchParams(data);
+                params.forEach(function(value, key) {
+                    formData.append(key, value);
+                });
                 
-                navigator.sendBeacon(CONFIG.API_URL, urlParams.toString());
+                return navigator.sendBeacon(url, formData);
+            }
+            return false;
+        }
+    };
+
+    window.createPixel = function() {
+        // Kiểm tra xem TRACKING_URL đã được set chưa
+        if (!window.TRACKING_URL) {
+            console.error('TRACKING_URL is not set');
+            return;
+        }
+
+        var params = Utils.getQueryParams();
+        var trackingParam = Utils.getFirstValidParam(params, CONFIG.TRACKING_PARAMS) || Utils.generateUniqueId();
+        
+        // UTM Parameters
+        var utmParams = {};
+        for (var utmKey in CONFIG.UTM_PARAMS) {
+            if (CONFIG.UTM_PARAMS.hasOwnProperty(utmKey)) {
+                var value = params[utmKey];
+                var mappedKey = CONFIG.UTM_PARAMS[utmKey];
+                if (Utils.isValidValue(value)) {
+                    utmParams[mappedKey] = Utils.sanitizeString(value);
+                }
+            }
+        }
+
+        // Create offer string
+        var offerParts = [
+            utmParams.traffic_source,
+            utmParams.traffic_type,
+            utmParams.campaign,
+            utmParams.creative,
+            utmParams.ad
+        ].filter(function(part) {
+            return Utils.isValidValue(part);
+        });
+
+        var offer = offerParts.length > 0 ? Utils.sanitizeString(offerParts.join('_')) : Utils.generateUniqueId();
+
+        // Build final URL parameters
+        var urlParams = new URLSearchParams();
+        
+        // Always add these parameters
+        urlParams.append('tid', offer);
+        urlParams.append('extclid', trackingParam);
+        urlParams.append('aff_sub1', trackingParam);
+        
+        // Thêm các tham số theo yêu cầu
+        if (params.gclid) urlParams.append('aff_sub2', params.gclid);
+        if (params.gbraid) urlParams.append('aff_sub3', params.gbraid);
+        if (params.wbraid) urlParams.append('aff_sub4', params.wbraid);
+        if (params.fbclid) urlParams.append('fbclid', params.fbclid);
+        
+        // Add UTM parameters
+        for (var key in utmParams) {
+            if (utmParams[key]) {
+                urlParams.append(key, utmParams[key]);
+            }
+        }
+
+        // Add offer if exists
+        if (offer) {
+            urlParams.append('offer', offer);
+        }
+
+        // Thêm thông tin thiết bị và trình duyệt
+        urlParams.append('device', Utils.getDeviceType());
+        urlParams.append('browser', Utils.getBrowser());
+        urlParams.append('screen', window.screen.width + 'x' + window.screen.height);
+        urlParams.append('referrer', document.referrer || '');
+        urlParams.append('page', window.location.pathname);
+        
+        // Add timestamp
+        var timestamp = Date.now();
+        urlParams.append('ts', timestamp);
+        
+        // Thêm checksum để xác minh tính toàn vẹn dữ liệu
+        var dataString = trackingParam + offer + timestamp;
+        urlParams.append('checksum', Utils.hashData(dataString));
+
+        var urlString = urlParams.toString();
+        var fullUrl = window.TRACKING_URL + '?' + urlString;
+
+        // Lưu trữ dữ liệu tracking
+        Utils.storeTrackingData(urlString);
+
+        // Thử sử dụng Beacon API trước (tốt hơn cho trường hợp người dùng rời trang)
+        var beaconSent = Utils.useBeaconIfAvailable(window.TRACKING_URL, urlString);
+        
+        // Nếu không thể sử dụng Beacon, dùng Image
+        if (!beaconSent) {
+            // Tạo và gửi pixel
+            var img = new Image();
+            img.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;visibility:hidden;pointer-events:none';
+            img.alt = '';
+            img.onload = function() {
+                // Đánh dấu dữ liệu đã gửi thành công
+                try {
+                    var stored = JSON.parse(localStorage.getItem('tracking_data') || '[]');
+                    for (var i = 0; i < stored.length; i++) {
+                        if (stored[i].data === urlString) {
+                            stored[i].sent = true;
+                            stored[i].sentTime = Date.now();
+                        }
+                    }
+                    localStorage.setItem('tracking_data', JSON.stringify(stored));
+                } catch (e) {}
+            };
+            img.onerror = function() {
+                console.warn('Tracking pixel failed to load');
+            };
+            img.src = fullUrl;
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.body && document.body.appendChild(img);
+                });
+            } else {
+                document.body && document.body.appendChild(img);
             }
         }
     };
 
-    // Khởi tạo tracker khi trang đã tải xong
-    if (document.readyState === 'complete') {
-        Tracker.init();
-    } else {
-        window.addEventListener('load', function() {
-            Tracker.init();
-        });
+    // Auto-initialize if not using callback
+    if (!window.trackingCallback) {
+        window.createPixel();
     }
-})();
+
+    // Thử gửi lại dữ liệu đã lưu trữ
+    window.addEventListener('online', Utils.sendStoredData);
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') {
+            Utils.sendStoredData();
+        }
+    });
+
+    // Thử gửi lại khi trang được tải lại
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', Utils.sendStoredData);
+    } else {
+        Utils.sendStoredData();
+    }
+
+    // Thêm sự kiện beforeunload để đảm bảo dữ liệu được gửi khi người dùng rời trang
+    window.addEventListener('beforeunload', function() {
+        Utils.useBeaconIfAvailable(window.TRACKING_URL, new URLSearchParams({
+            tid: 'exit',
+            extclid: Utils.generateUniqueId(),
+            page: window.location.pathname,
+            ts: Date.now()
+        }).toString());
+    });
+
+})(window, document);
