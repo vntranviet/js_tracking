@@ -1,5 +1,5 @@
 /**
- * @fileoverview Tracking Pixel 14h57-21.6.25
+ * @Tracking Pixel 14h57-21.6.25
  * @version 1.0.0
  */
 
