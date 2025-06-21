@@ -1,0 +1,64 @@
+// Thông tin file cần clear cache
+const fileInfo = {
+    username: 'vntranviet',
+    repo: 'js_tracking',
+    branch: 'main',
+    file: 'track_px_cb.js'
+};
+
+// Hàm clear cache và reload script
+async function clearJsDelivrCache() {
+    const purgeUrl = `https://purge.jsdelivr.net/gh/${fileInfo.username}/${fileInfo.repo}@${fileInfo.branch}/${fileInfo.file}`;
+    const cdnUrl = `https://cdn.jsdelivr.net/gh/${fileInfo.username}/${fileInfo.repo}@${fileInfo.branch}/${fileInfo.file}`;
+
+    try {
+        // 1. Clear cache
+        console.log('Đang clear cache...');
+        const purgeResponse = await fetch(purgeUrl);
+        
+        if (purgeResponse.ok) {
+            console.log('✅ Clear cache thành công!');
+            
+            // 2. Đợi 2 giây để CDN cập nhật
+            console.log('Đợi CDN cập nhật...');
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            // 3. Tải lại script
+            console.log('Đang tải lại script...');
+            
+            // Xóa script cũ nếu có
+            const oldScript = document.querySelector(`script[src*="${fileInfo.file}"]`);
+            if (oldScript) {
+                oldScript.remove();
+                console.log('Đã xóa script cũ');
+            }
+
+            // Tạo script mới với timestamp
+            const newScript = document.createElement('script');
+            newScript.src = `${cdnUrl}?t=${Date.now()}`;
+            
+            // Thêm script mới
+            document.body.appendChild(newScript);
+            
+            console.log('✅ Hoàn tất! Script mới đã được tải:');
+            console.log(newScript.src);
+            
+            // Kiểm tra script mới
+            newScript.onload = () => console.log('✅ Script mới đã load thành công!');
+            newScript.onerror = (error) => console.error('❌ Lỗi khi tải script mới:', error);
+
+        } else {
+            console.error('❌ Lỗi khi clear cache:', purgeResponse.statusText);
+        }
+    } catch (error) {
+        console.error('❌ Lỗi trong quá trình xử lý:', error);
+    }
+}
+
+// Thực thi clear cache
+clearJsDelivrCache();
+
+// Hiển thị URLs để kiểm tra
+console.log('URLs để kiểm tra thủ công:');
+console.log('1. URL Purge:', `https://purge.jsdelivr.net/gh/${fileInfo.username}/${fileInfo.repo}@${fileInfo.branch}/${fileInfo.file}`);
+console.log('2. CDN URL:', `https://cdn.jsdelivr.net/gh/${fileInfo.username}/${fileInfo.repo}@${fileInfo.branch}/${fileInfo.file}`);
