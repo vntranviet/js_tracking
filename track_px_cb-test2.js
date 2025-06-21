@@ -1,4 +1,4 @@
-  (function TrackingInit(window, document) {
+(function TrackingInit(window, document) {
     'use strict';
 
     var CONFIG = {
@@ -11,8 +11,8 @@
             'utm_term': 'creative',
             'utm_content': 'ad'
         },
-        RETRY_INTERVAL: 30 * 60 * 1000, // 30 phút
-        DATA_RETENTION: 7 * 24 * 60 * 60 * 1000 // 7 ngày
+        RETRY_INTERVAL: 30 * 60 * 1000,
+        DATA_RETENTION: 7 * 24 * 60 * 60 * 1000
     };
 
     var Utils = {
@@ -20,28 +20,19 @@
             return value && typeof value === 'string' && value.trim().length > 0;
         },
 
-        // Kiểm tra định dạng gclid (Google Click ID)
         validateGclid: function(value) {
             if (!Utils.isValidValue(value)) return false;
-            // gclid thường là chuỗi alphanumeric có độ dài từ 10 ký tự trở lên
             return /^[a-zA-Z0-9_-]{10,}$/.test(value.trim());
         },
 
-        // Kiểm tra định dạng gbraid đã được đơn giản hóa
         validateGbraid: function(value) {
             if (!Utils.isValidValue(value)) return false;
             return /^[a-zA-Z0-9_-]{15,}$/.test(value.trim());
         },
 
-        // Kiểm tra định dạng wbraid đã được đơn giản hóa
         validateWbraid: function(value) {
             if (!Utils.isValidValue(value)) return false;
             return /^[a-zA-Z0-9_-]{15,}$/.test(value.trim());
-        },
-
-        // Ghi log lỗi nếu tham số không hợp lệ
-        logInvalidParam: function(paramName, value) {
-            console.warn('Invalid ' + paramName + ' value:', value);
         },
 
         getQueryParams: function() {
@@ -57,7 +48,6 @@
                 }
                 return params;
             } catch (e) {
-                console.error('Error parsing URL parameters:', e);
                 return {};
             }
         },
@@ -124,9 +114,7 @@
                     sent: false
                 });
                 localStorage.setItem('tracking_data', JSON.stringify(stored));
-            } catch (e) {
-                console.error('Failed to store tracking data:', e);
-            }
+            } catch (e) {}
         },
 
         sendStoredData: function() {
@@ -156,9 +144,7 @@
                 }
                 
                 localStorage.setItem('tracking_data', JSON.stringify(updated));
-            } catch (e) {
-                console.error('Failed to send stored tracking data:', e);
-            }
+            } catch (e) {}
         },
 
         useBeaconIfAvailable: function(url, data) {
@@ -176,10 +162,7 @@
     };
 
     window.createPixel = function() {
-        if (!window.TRACKING_URL) {
-            console.error('TRACKING_URL is not set');
-            return;
-        }
+        if (!window.TRACKING_URL) return;
 
         var params = Utils.getQueryParams();
         
@@ -187,31 +170,16 @@
         var gbraidValue = '';
         var wbraidValue = '';
         
-        if (params.gclid) {
-            if (Utils.validateGclid(params.gclid)) {
-                gclidValue = params.gclid.trim();
-                console.log('Valid gclid found:', gclidValue);
-            } else {
-                Utils.logInvalidParam('gclid', params.gclid);
-            }
+        if (params.gclid && Utils.validateGclid(params.gclid)) {
+            gclidValue = params.gclid.trim();
         }
         
-        if (params.gbraid) {
-            if (Utils.validateGbraid(params.gbraid)) {
-                gbraidValue = params.gbraid.trim();
-                console.log('Valid gbraid found:', gbraidValue);
-            } else {
-                Utils.logInvalidParam('gbraid', params.gbraid);
-            }
+        if (params.gbraid && Utils.validateGbraid(params.gbraid)) {
+            gbraidValue = params.gbraid.trim();
         }
         
-        if (params.wbraid) {
-            if (Utils.validateWbraid(params.wbraid)) {
-                wbraidValue = params.wbraid.trim();
-                console.log('Valid wbraid found:', wbraidValue);
-            } else {
-                Utils.logInvalidParam('wbraid', params.wbraid);
-            }
+        if (params.wbraid && Utils.validateWbraid(params.wbraid)) {
+            wbraidValue = params.wbraid.trim();
         }
         
         var trackingParam = '';
@@ -303,9 +271,6 @@
                     }
                     localStorage.setItem('tracking_data', JSON.stringify(stored));
                 } catch (e) {}
-            };
-            img.onerror = function() {
-                console.warn('Tracking pixel failed to load');
             };
             img.src = fullUrl;
 
