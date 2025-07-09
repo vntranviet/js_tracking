@@ -1,6 +1,6 @@
 /**
- * @Tracking Pixel 14h57-21.6.25
- * @version test 8.7
+ * @Tracking Pixel 9.7.25 - Test OK
+ * @version test 9.7.25
  */
 
 (function TrackingInit(window, document) {
