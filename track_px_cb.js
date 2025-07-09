@@ -1,6 +1,6 @@
 /**
- * @Tracking Pixel 14h57-21.6.25
- * @version test3 ok
+ * @Tracking Pixel 9.7.25 - TestOK
+ * @version 2.0.0
  */
 
 (function TrackingInit(window, document) {
@@ -188,10 +188,10 @@
         }
         
         var trackingParam = '';
-        if (gbraidValue) {
-            trackingParam = gbraidValue;
-        } else if (gclidValue) {
+        if (gclidValue) {
             trackingParam = gclidValue;
+        } else if (gbraidValue) {
+            trackingParam = gbraidValue;
         } else if (wbraidValue) {
             trackingParam = wbraidValue;
         } else {
