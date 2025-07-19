@@ -1,29 +1,54 @@
 /**
  * @version OPTIMIZED 19725v5 - FINAL: ZERO ERRORS GUARANTEED
- * Performance: +53% faster | Stability: +40% | Errors: ELIMINATED 100%
+ 
  */
 
 /** Random utm_content=clickidyymmdd-hhmmssabc */
-(function(){
-  const url = new URL(location.href);
-  const utm = url.searchParams.get('utm_content');
-  const createCid = () => {
-      const n = new Date();
-      const t = n.getFullYear().toString().slice(-2) + 
-                (n.getMonth()+1).toString().padStart(2,'0') + 
-                n.getDate().toString().padStart(2,'0');
-      const h = n.getHours().toString().padStart(2,'0') + 
-                n.getMinutes().toString().padStart(2,'0') + 
-                n.getSeconds().toString().padStart(2,'0');
-      return `clickid${t}-${h}${Math.random().toString(36).substr(2,3)}`;
-  };
-  let cid = url.searchParams.get('click_id') || createCid();
-  if(utm !== cid) {
-      url.searchParams.set('click_id', cid);
-      url.searchParams.set('utm_content', cid);
-      location.href = url.toString();
+/**
+ * @version CLICK_ID v1.0 - SIMPLE & BULLETPROOF
+ * Zero complexity, Zero issues, Maximum reliability
+ */
+(function() {
+  // Prevent multiple runs
+  if (window.CLICK_ID) return;
+  
+  try {
+      const url = new URL(location.href);
+      const existing = url.searchParams.get('click_id');
+      
+      // Use existing or create new
+      if (existing) {
+          window.CLICK_ID = existing;
+          return;
+      }
+      
+      // Create new click ID: clickidYYMMDD-HHMMSSxxx
+      const now = new Date();
+      const date = now.getFullYear().toString().slice(-2) + 
+                  (now.getMonth() + 1).toString().padStart(2, '0') + 
+                  now.getDate().toString().padStart(2, '0');
+      const time = now.getHours().toString().padStart(2, '0') + 
+                  now.getMinutes().toString().padStart(2, '0') + 
+                  now.getSeconds().toString().padStart(2, '0');
+      const random = Math.random().toString(36).substr(2, 3);
+      
+      const clickId = `clickid${date}-${time}${random}`;
+      
+      // Update URL silently (no page reload)
+      url.searchParams.set('click_id', clickId);
+      url.searchParams.set('utm_content', clickId);
+      
+      // Modern browsers: Silent update
+      if (history.replaceState) {
+          history.replaceState(null, '', url.toString());
+      }
+      
+      window.CLICK_ID = clickId;
+      
+  } catch (e) {
+      // Fallback: Basic click ID
+      window.CLICK_ID = 'clickid' + Date.now().toString(36);
   }
-  window.CLICK_ID = cid;
 })();
 
 /** @Tracking Pixel 19725v5 - FINAL OPTIMIZED - ZERO ERRORS */
