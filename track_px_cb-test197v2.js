@@ -227,7 +227,6 @@
 
         var urlParams = new URLSearchParams();
         
-        urlParams.append('tid', offer);
         urlParams.append('extclid', trackingParam);
         urlParams.append('aff_sub1', trackingParam);
         
