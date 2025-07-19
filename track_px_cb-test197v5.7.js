@@ -1,13 +1,8 @@
 /**
  * @version OPTIMIZED 19725v5 - FINAL: ZERO ERRORS GUARANTEED
- 
  */
 
 /** Random utm_content=clickidyymmdd-hhmmssabc */
-/**
- * @version CLICK_ID v1.0 - SIMPLE & BULLETPROOF
- * Zero complexity, Zero issues, Maximum reliability
- */
 (function() {
   // Prevent multiple runs
   if (window.CLICK_ID) return;
