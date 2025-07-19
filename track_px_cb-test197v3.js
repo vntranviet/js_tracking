@@ -217,8 +217,7 @@
             utmParams.traffic_source,
             utmParams.traffic_type,
             utmParams.campaign,
-            utmParams.creative,
-            utmParams.ad
+            utmParams.creative
         ].filter(function(part) {
             return Utils.isValidValue(part);
         });
