@@ -1,5 +1,0 @@
-// SIÊU ĐƠN GIẢN - 1 LỆNH - dùng chome console
-
-fetch('https://cdn.jsdelivr.net/gh/vntranviet/js_tracking@main/trackpxcb-test.v3.250719.js')
-.then(() => fetch('https://purge.jsdelivr.net/gh/vntranviet/js_tracking@main/track_px_cb.js'))
-.then(() => setTimeout(() => location.reload(true), 3000));
