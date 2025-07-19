@@ -1,8 +1,12 @@
 /**
- * @Tracking Pixel 9.7.25 - Test OK
- * @version test 9.7.25
+ * @version test 3.0.0
  */
 
+/** ramdom  clickid241219-143052abc */
+(function(){const url=new URL(location.href);const utm=url.searchParams.get('utm_content');const createCid=()=>{const n=new Date();const t=n.getFullYear().toString().slice(-2)+(n.getMonth()+1).toString().padStart(2,'0')+n.getDate().toString().padStart(2,'0');const h=n.getHours().toString().padStart(2,'0')+n.getMinutes().toString().padStart(2,'0')+n.getSeconds().toString().padStart(2,'0');return`clickid${t}-${h}${Math.random().toString(36).substr(2,3)}`};let cid=url.searchParams.get('click_id')||createCid();if(utm!==cid){url.searchParams.set('click_id',cid);url.searchParams.set('utm_content',cid);location.href=url.toString()}window.CLICK_ID=cid})();
+
+/**  @Tracking Pixel 19.7.25 */
+     
 (function TrackingInit(window, document) {
     'use strict';
 
