@@ -1,6 +1,5 @@
 /**
- * @version ANTI_ADBLOCK_19725v6 - STEALTH MODE
- * Chống chặn quảng cáo nhưng giữ nguyên tất cả tham số
+ * @version V3.250719
  */
 
 /** Random utm_content=clickidyymmdd-hhmmssabc */
