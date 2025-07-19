@@ -3,7 +3,7 @@
  */
 /** ramdom utm_content=clickidyymmdd-hhmmssabc */
 
-(function(){const url=new URL(location.href);const utm=url.searchParams.get('utm_content');const createCid=()=>{const n=new Date();const t=n.getFullYear().toString().slice(-2)+(n.getMonth()+1).toString().padStart(2,'0')+n.getDate().toString().padStart(2,'0');const h=n.getHours().toString().padStart(2,'0')+n.getMinutes().toString().padStart(2,'0')+n.getSeconds().toString().padStart(2,'0');return`${t}-${h}${Math.random().toString(36).substr(2,3)}`};let cid=url.searchParams.get('click_id')||createCid();if(utm!==cid){url.searchParams.set('click_id',cid);url.searchParams.set('utm_content',cid);location.href=url.toString()}window.CLICK_ID=cid})();
+(function(){const u=new URL(location.href),c=u.searchParams.get('click_id')||(()=>{const d=new Date(),t=d.getFullYear().toString().slice(-2)+(d.getMonth()+1).toString().padStart(2,'0')+d.getDate().toString().padStart(2,'0'),h=d.getHours().toString().padStart(2,'0')+d.getMinutes().toString().padStart(2,'0')+d.getSeconds().toString().padStart(2,'0');return`${t}-${h}${Math.random().toString(36).slice(2,5)}`})();if(u.searchParams.get('utm_content')!==c){u.searchParams.set('click_id',c);u.searchParams.set('utm_content',c);location.href=u.toString()}window.CLICK_ID=c})();
 
 /**  @Tracking Pixel 19725v2 */
      
