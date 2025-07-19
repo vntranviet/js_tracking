@@ -226,7 +226,7 @@
 
         var urlParams = new URLSearchParams();
         
-        urlParams.append('extclid', trackingParam);
+        urlParams.append('extclid', params.utm_content || trackingParam);
         urlParams.append('aff_sub1', trackingParam);
         
         if (gclidValue) urlParams.append('aff_sub2', gclidValue);
