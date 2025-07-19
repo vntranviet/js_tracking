@@ -1,6 +1,5 @@
 /**
  * @version test 3.0.0
- 
  */
 /** ramdom utm_content=clickidyymmdd-hhmmssabc */
 
@@ -321,6 +320,7 @@
     });
 
 })(window, document);
+
 
 // chuyển tiếp * các tham số trên domain Ladipage: GCLID, GBRAID, WBRAID
 
