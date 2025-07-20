@@ -2,73 +2,100 @@
  * @version V10h.250720
  */
 
-  
-/** Random utm_content=clickidyymmdd-hhmmssabcdef */
+  /** Fixed Optimized Traffic Detection with Cookie Storage */
 (function() {
-// Prevent multiple runs
-if (window.CLICK_ID) return;
-
-try {
+  if (window.CLICKID) return;
+  
+  try {
+    // Cookie utils - FIXED
+    const setCookie = (name, value, days = 30) => {
+      const expires = new Date(Date.now() + days * 864e5).toUTCString();
+      const domain = location.hostname.replace(/^www\./, '');
+      document.cookie = `${name}=${value}; expires=${expires}; path=/; domain=.${domain}; SameSite=Lax; Secure`;
+    };
+    
+    const getCookie = name => {
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i].trim(); // FIXED: Added trim()
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
+      }
+      return null;
+    };
+    
+    // Priority 1: Cookie
+    let clickId = getCookie('clickid');
+    if (clickId) {
+      window.CLICKID = clickId;
+      const url = new URL(location.href);
+      if (!url.searchParams.get('clickid')) {
+        url.searchParams.set('clickid', clickId);
+        url.searchParams.set('utm_content', clickId);
+        history.replaceState?.(null, '', url);
+      }
+      console.log('Using cookie clickid:', clickId);
+      return;
+    }
+    
+    // Priority 2: URL
     const url = new URL(location.href);
-    
-    // Check cookie first
-    const cookieClickId = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('click_id='))
-        ?.split('=')[1];
-    
-    if (cookieClickId) {
-        window.CLICK_ID = cookieClickId;
-        // Update URL with existing cookie value
-        if (!url.searchParams.get('click_id')) {
-            url.searchParams.set('click_id', cookieClickId);
-            url.searchParams.set('utm_content', cookieClickId);
-            if (history.replaceState) {
-                history.replaceState(null, '', url.toString());
-            }
-        }
-        return;
+    clickId = url.searchParams.get('clickid');
+    if (clickId) {
+      window.CLICKID = clickId;
+      setCookie('clickid', clickId);
+      console.log('Using URL clickid:', clickId);
+      return;
     }
     
-    // Check URL parameter
-    const existing = url.searchParams.get('click_id');
-    if (existing) {
-        window.CLICK_ID = existing;
-        // Save to cookie for future visits
-        document.cookie = `click_id=${existing}; max-age=2592000; path=/`;
-        return;
-    }
+    // Priority 3: Generate new
+    const params = url.searchParams;
+    const ref = document.referrer;
     
-    // Create new click ID: clickidYYMMDD-HHMMSSxxxxx
+    // Traffic detection
+    const source = 
+      (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
+      (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
+      (params.get('utm_source')?.match(/^(ytb|yt|youtube)/) || ref.includes('youtube.com')) ? 'ytb' :
+      (params.get('fbclid') || params.get('utm_source')?.includes('facebook')) ? 'fb' :
+      (params.get('ttclid') || params.get('utm_source')?.includes('tiktok')) ? 'tt' :
+      (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' : '';
+    
+    // Generate ID - FIXED format
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
-                (now.getMonth() + 1).toString().padStart(2, '0') + 
-                now.getDate().toString().padStart(2, '0');
-    const time = now.getHours().toString().padStart(2, '0') + 
-                now.getMinutes().toString().padStart(2, '0') + 
-                now.getSeconds().toString().padStart(2, '0');
-    const random = Math.random().toString(36).substr(2, 6);
+                String(now.getMonth() + 1).padStart(2, '0') + 
+                String(now.getDate()).padStart(2, '0');
+    const time = String(now.getHours()).padStart(2, '0') + 
+                String(now.getMinutes()).padStart(2, '0') + 
+                String(now.getSeconds()).padStart(2, '0');
+    const random = Math.random().toString(36).substr(2, 5);
     
-    const clickId = `clickid${date}-${time}${random}`;
+    // FIXED: Proper format handling
+    clickId = source ? 
+              `clickid${date}-${time}${source}-${random}` : 
+              `clickid${date}-${time}-${random}`;
     
-    // Update URL silently (no page reload)
-    url.searchParams.set('click_id', clickId);
+    // Save everywhere
+    window.CLICKID = clickId;
+    setCookie('clickid', clickId);
+    url.searchParams.set('clickid', clickId);
     url.searchParams.set('utm_content', clickId);
+    history.replaceState?.(null, '', url);
     
-    // Modern browsers: Silent update
-    if (history.replaceState) {
-        history.replaceState(null, '', url.toString());
+    console.log('Generated clickid:', clickId, '| Source:', source || 'direct');
+    
+  } catch (e) {
+    // Enhanced fallback
+    const fallbackId = 'clickid' + Date.now().toString(36);
+    window.CLICKID = fallbackId;
+    try {
+      setCookie('clickid', fallbackId);
+    } catch (cookieErr) {
+      console.warn('Cookie save failed');
     }
-    
-    // Save to cookie for future visits
-    document.cookie = `click_id=${clickId}; max-age=2592000; path=/`;
-    
-    window.CLICK_ID = clickId;
-    
-} catch (e) {
-    // Fallback: Basic click ID
-    window.CLICK_ID = 'clickid' + Date.now().toString(36);
-}
+    console.log('Fallback clickid:', fallbackId);
+  }
 })();
 
   
