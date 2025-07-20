@@ -2,7 +2,7 @@
  * @version V10h.250720
  */
 
- /** Clickdid */
+ /** Session Persistent Traffic Detection - CHỈ FIX 2 LỖI JSON + SESSIONSTORAGE */
 (function() {
   if (window.CLICKID) return;
   
@@ -192,7 +192,6 @@ function safeJSONParse(str) {
     return null;
   }
 }
-  
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
 (function TrackingInit(window, document) {
