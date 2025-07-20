@@ -2,16 +2,15 @@
  * @version V10h.250720
  */
 
- /** Session Persistent Traffic Detection - CHỈ FIX 2 LỖI JSON + SESSIONSTORAGE */
+/** Session Persistent Traffic Detection System */
 (function() {
   if (window.CLICKID) return;
   
-  // Safe SessionStorage Helper - CHỈ THÊM TRY/CATCH
+  // Safe SessionStorage Helper
   function safeSessionGet(key) {
     try {
       return sessionStorage.getItem(key);
     } catch(e) {
-      console.warn('SessionStorage get failed:', e.message);
       return null;
     }
   }
@@ -21,7 +20,6 @@
       sessionStorage.setItem(key, value);
       return true;
     } catch(e) {
-      console.warn('SessionStorage set failed:', e.message);
       return false;
     }
   }
@@ -30,17 +28,16 @@
     try {
       sessionStorage.removeItem(key);
     } catch(e) {
-      console.warn('SessionStorage remove failed:', e.message);
+      // Silent fail
     }
   }
   
-  // Safe JSON Helper - CHỈ THÊM TRY/CATCH
+  // Safe JSON Helper
   function safeJSONParse(str) {
     if (!str) return null;
     try {
       return JSON.parse(str);
     } catch(e) {
-      console.warn('JSON parse failed:', e.message);
       return null;
     }
   }
@@ -49,7 +46,6 @@
     try {
       return JSON.stringify(obj);
     } catch(e) {
-      console.warn('JSON stringify failed:', e.message);
       return null;
     }
   }
@@ -61,20 +57,18 @@
     
     if (clickId) {
       window.CLICKID = clickId;
-      safeSessionSet('clickid', clickId); // THAY ĐỔI: dùng safe function
-      console.log('📌 Using URL clickid:', clickId);
+      safeSessionSet('clickid', clickId);
       return;
     }
     
     // Priority 2: SessionStorage
-    const storedClickId = safeSessionGet('clickid'); // THAY ĐỔI: dùng safe function
+    const storedClickId = safeSessionGet('clickid');
     if (storedClickId) {
       window.CLICKID = storedClickId;
       // Add to URL for tracking
       url.searchParams.set('clickid', storedClickId);
       url.searchParams.set('utm_content', storedClickId);
       history.replaceState?.(null, '', url);
-      console.log('🔄 Using session clickid:', storedClickId);
       return;
     }
     
@@ -82,7 +76,7 @@
     const params = url.searchParams;
     const ref = document.referrer;
     
-    // Traffic detection - GIỮ NGUYÊN LOGIC GỐC
+    // Traffic detection
     const source = 
       // Taboola
       (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
@@ -101,7 +95,7 @@
       // Direct/Organic
       'dr';
     
-    // Generate FIRST-TIME clickid - GIỮ NGUYÊN LOGIC GỐC
+    // Generate FIRST-TIME clickid
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
                 String(now.getMonth() + 1).padStart(2, '0') + 
@@ -115,7 +109,7 @@
     
     // Save everywhere
     window.CLICKID = clickId;
-    safeSessionSet('clickid', clickId); // THAY ĐỔI: dùng safe function
+    safeSessionSet('clickid', clickId);
     
     // Update URL
     url.searchParams.set('clickid', clickId);
@@ -134,26 +128,23 @@
     };
     
     window.TRAFFIC_INFO = trafficInfo;
-    const trafficInfoStr = safeJSONStringify(trafficInfo); // THAY ĐỔI: dùng safe function
+    const trafficInfoStr = safeJSONStringify(trafficInfo);
     if (trafficInfoStr) {
-      safeSessionSet('traffic_info', trafficInfoStr); // THAY ĐỔI: dùng safe function
+      safeSessionSet('traffic_info', trafficInfoStr);
     }
-    
-    console.log('🆕 Generated NEW clickid:', clickId, '| Source:', source);
     
   } catch (e) {
     // Ultimate fallback
     const fallbackId = 'clickid' + Date.now().toString(36);
     window.CLICKID = fallbackId;
-    safeSessionSet('clickid', fallbackId); // THAY ĐỔI: dùng safe function
-    console.log('⚠️ Fallback clickid:', fallbackId, '| Error:', e.message);
+    safeSessionSet('clickid', fallbackId);
   }
 })();
 
 // Enhanced helper function
 window.getTrafficInfo = function() {
-  const storedInfo = safeSessionGet('traffic_info'); // THAY ĐỔI: dùng safe function
-  const parsedInfo = safeJSONParse(storedInfo); // THAY ĐỔI: dùng safe function
+  const storedInfo = safeSessionGet('traffic_info');
+  const parsedInfo = safeJSONParse(storedInfo);
   
   return {
     clickId: window.CLICKID,
@@ -166,19 +157,17 @@ window.getTrafficInfo = function() {
 
 // Clear session data when needed
 window.clearTrafficSession = function() {
-  safeSessionRemove('clickid'); // THAY ĐỔI: dùng safe function
-  safeSessionRemove('traffic_info'); // THAY ĐỔI: dùng safe function
+  safeSessionRemove('clickid');
+  safeSessionRemove('traffic_info');
   delete window.CLICKID;
   delete window.TRAFFIC_INFO;
-  console.log('🧹 Traffic session cleared');
 };
 
-// Safe helper functions - ĐỂ BÊN NGOÀI ĐỂ getTrafficInfo có thể dùng
+// Safe helper functions
 function safeSessionGet(key) {
   try {
     return sessionStorage.getItem(key);
   } catch(e) {
-    console.warn('SessionStorage get failed:', e.message);
     return null;
   }
 }
@@ -188,10 +177,11 @@ function safeJSONParse(str) {
   try {
     return JSON.parse(str);
   } catch(e) {
-    console.warn('JSON parse failed:', e.message);
     return null;
   }
 }
+
+
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
 (function TrackingInit(window, document) {
