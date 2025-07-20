@@ -1,51 +1,50 @@
 /**
- * @version V22h.250719
+ * @version V80h.250720
  */
 
-/** Random utm_content=clickidyymmdd-hhmmss.xxxxx */
+/** Random utm_content=clickidyymmdd-hhmmssxxxxxx */
 (function() {
 // Prevent multiple runs
 if (window.CLICK_ID) return;
 
 try {
-    const url = new URL(location.href);
-    const existing = url.searchParams.get('click_id');
-    
-    // Use existing or create new
-    if (existing) {
-        window.CLICK_ID = existing;
-        return;
-    }
-    
-    // Create new click ID: clickidYYMMDD-HHMMSS.xxxxx
-    const now = new Date();
-    const date = now.getFullYear().toString().slice(-2) + 
-                (now.getMonth() + 1).toString().padStart(2, '0') + 
-                now.getDate().toString().padStart(2, '0');
-    const time = now.getHours().toString().padStart(2, '0') + 
-                now.getMinutes().toString().padStart(2, '0') + 
-                now.getSeconds().toString().padStart(2, '0');
-    const random = Math.random().toString(36).substr(2, 6);
-    
-    const clickId = `clickid${date}-${time}.${random}`;
-    
-    // Update URL silently (no page reload)
-    url.searchParams.set('click_id', clickId);
-    url.searchParams.set('utm_content', clickId);
-    
-    // Modern browsers: Silent update
-    if (history.replaceState) {
-        history.replaceState(null, '', url.toString());
-    }
-    
-    window.CLICK_ID = clickId;
-    
+  const url = new URL(location.href);
+  const existing = url.searchParams.get('click_id');
+  
+  // Use existing or create new
+  if (existing) {
+      window.CLICK_ID = existing;
+      return;
+  }
+  
+  // Create new click ID: clickidYYMMDD-HHMMSSxxxxxx
+  const now = new Date();
+  const date = now.getFullYear().toString().slice(-2) + 
+              (now.getMonth() + 1).toString().padStart(2, '0') + 
+              now.getDate().toString().padStart(2, '0');
+  const time = now.getHours().toString().padStart(2, '0') + 
+              now.getMinutes().toString().padStart(2, '0') + 
+              now.getSeconds().toString().padStart(2, '0');
+  const random = Math.random().toString(36).substr(2, 6);
+  
+  const clickId = `clickid${date}-${time}${random}`;
+  
+  // Update URL silently (no page reload)
+  url.searchParams.set('click_id', clickId);
+  url.searchParams.set('utm_content', clickId);
+  
+  // Modern browsers: Silent update
+  if (history.replaceState) {
+      history.replaceState(null, '', url.toString());
+  }
+  
+  window.CLICK_ID = clickId;
+  
 } catch (e) {
-    // Fallback: Basic click ID
-    window.CLICK_ID = 'clickid' + Date.now().toString(36);
+  // Fallback: Basic click ID
+  window.CLICK_ID = 'clickid' + Date.now().toString(36);
 }
 })();
-
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
 (function TrackingInit(window, document) {
