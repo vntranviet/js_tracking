@@ -1,52 +1,76 @@
 /**
- * @version V80h.250720
+ * @version V10h.250720
  */
 
   
-
-  /** Random utm_content=clickidyymmdd-hhmmssxxxxxx */
+/** Random utm_content=clickidyymmdd-hhmmssabcdef */
 (function() {
 // Prevent multiple runs
 if (window.CLICK_ID) return;
 
 try {
-  const url = new URL(location.href);
-  const existing = url.searchParams.get('click_id');
-  
-  // Use existing or create new
-  if (existing) {
-      window.CLICK_ID = existing;
-      return;
-  }
-  
-  // Create new click ID: clickidYYMMDD-HHMMSSxxxxxx
-  const now = new Date();
-  const date = now.getFullYear().toString().slice(-2) + 
-              (now.getMonth() + 1).toString().padStart(2, '0') + 
-              now.getDate().toString().padStart(2, '0');
-  const time = now.getHours().toString().padStart(2, '0') + 
-              now.getMinutes().toString().padStart(2, '0') + 
-              now.getSeconds().toString().padStart(2, '0');
-  const random = Math.random().toString(36).substr(2, 6);
-  
-  const clickId = `clickid${date}-${time}${random}`;
-  
-  // Update URL silently (no page reload)
-  url.searchParams.set('click_id', clickId);
-  url.searchParams.set('utm_content', clickId);
-  
-  // Modern browsers: Silent update
-  if (history.replaceState) {
-      history.replaceState(null, '', url.toString());
-  }
-  
-  window.CLICK_ID = clickId;
-  
+    const url = new URL(location.href);
+    
+    // Check cookie first
+    const cookieClickId = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('click_id='))
+        ?.split('=')[1];
+    
+    if (cookieClickId) {
+        window.CLICK_ID = cookieClickId;
+        // Update URL with existing cookie value
+        if (!url.searchParams.get('click_id')) {
+            url.searchParams.set('click_id', cookieClickId);
+            url.searchParams.set('utm_content', cookieClickId);
+            if (history.replaceState) {
+                history.replaceState(null, '', url.toString());
+            }
+        }
+        return;
+    }
+    
+    // Check URL parameter
+    const existing = url.searchParams.get('click_id');
+    if (existing) {
+        window.CLICK_ID = existing;
+        // Save to cookie for future visits
+        document.cookie = `click_id=${existing}; max-age=2592000; path=/`;
+        return;
+    }
+    
+    // Create new click ID: clickidYYMMDD-HHMMSSxxxxx
+    const now = new Date();
+    const date = now.getFullYear().toString().slice(-2) + 
+                (now.getMonth() + 1).toString().padStart(2, '0') + 
+                now.getDate().toString().padStart(2, '0');
+    const time = now.getHours().toString().padStart(2, '0') + 
+                now.getMinutes().toString().padStart(2, '0') + 
+                now.getSeconds().toString().padStart(2, '0');
+    const random = Math.random().toString(36).substr(2, 6);
+    
+    const clickId = `clickid${date}-${time}${random}`;
+    
+    // Update URL silently (no page reload)
+    url.searchParams.set('click_id', clickId);
+    url.searchParams.set('utm_content', clickId);
+    
+    // Modern browsers: Silent update
+    if (history.replaceState) {
+        history.replaceState(null, '', url.toString());
+    }
+    
+    // Save to cookie for future visits
+    document.cookie = `click_id=${clickId}; max-age=2592000; path=/`;
+    
+    window.CLICK_ID = clickId;
+    
 } catch (e) {
-  // Fallback: Basic click ID
-  window.CLICK_ID = 'clickid' + Date.now().toString(36);
+    // Fallback: Basic click ID
+    window.CLICK_ID = 'clickid' + Date.now().toString(36);
 }
 })();
+
   
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
