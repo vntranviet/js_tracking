@@ -1,10 +1,5 @@
 /**
- * @version V10h.250720
- */
-
-/**
- * COMPLIANT TRACKING CODE - Keep History Manipulation
- * @version V3.12.250720-COMPLIANT-KEEP-HISTORY
+ * @version V5.0-14.250720
  */
 
 (function() {
@@ -54,29 +49,24 @@ try {
   const url = new URL(location.href);
   let clickId = url.searchParams.get('clickid');
   
-  // Priority 1: URL clickid
   if (clickId) {
     window.CLICKID = clickId;
     safeSessionSet('tracking_clickid', clickId); 
     return;
   }
   
-  // Priority 2: SessionStorage
   const storedClickId = safeSessionGet('tracking_clickid'); 
   if (storedClickId) {
     window.CLICKID = storedClickId;
-    // 🔄 KEEP: Add to URL for tracking (as requested)
     url.searchParams.set('clickid', storedClickId);
     url.searchParams.set('utm_content', storedClickId);
     history.replaceState?.(null, '', url);
     return;
   }
   
-  // Priority 3: Generate new clickid
   const params = url.searchParams;
   const ref = document.referrer;
   
-  // Traffic detection (unchanged)
   const source = 
     (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
     (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
@@ -87,7 +77,6 @@ try {
     (params.get('utm_medium') === 'email' || params.get('utm_source')?.includes('email') || params.get('utm_source') === 'mail') ? 'mail' :
     'dr';
   
-  // Generate clickid (unchanged logic)
   const now = new Date();
   const date = now.getFullYear().toString().slice(-2) + 
               String(now.getMonth() + 1).padStart(2, '0') + 
@@ -99,16 +88,13 @@ try {
   
   clickId = `clickid${date}-${time}${source}-${random}`;
   
-  // Save (same functionality)
   window.CLICKID = clickId;
-  safeSessionSet('tracking_clickid', clickId); // ✅ TRANSPARENT naming
+  safeSessionSet('tracking_clickid', clickId);
   
-  // 🔄 KEEP: Update URL (as requested)
   url.searchParams.set('clickid', clickId);
   url.searchParams.set('utm_content', clickId);
   history.replaceState?.(null, '', url);
   
-  // Traffic info (unchanged)
   const trafficInfo = {
     clickId: clickId,
     source: source,
@@ -132,7 +118,6 @@ try {
 }
 })();
 
-// Helper functions (unchanged)
 window.getTrafficInfo = function() {
 const storedInfo = safeSessionGet('tracking_traffic_info'); 
 const parsedInfo = safeJSONParse(storedInfo);
@@ -170,7 +155,7 @@ try {
 }
 }
 
-/** COMPLIANT TRACKING PIXEL */
+/** OPTIMIZED TRACKING PIXEL */
 (function TrackingInit(window, document) {
 'use strict';
 
@@ -192,7 +177,6 @@ var CONFIG = {
 };
 
 var Utils = {
-  // All validation functions unchanged
   isValidValue: function(value) {
       return value && typeof value === 'string' && value.trim().length > 0;
   },
@@ -300,9 +284,7 @@ var Utils = {
           }).slice(-50);
           
           localStorage.setItem(storageKey, JSON.stringify(stored));
-      } catch (e) {
-          // Continue silently
-      }
+      } catch (e) {}
   },
 
   sendStoredData: function() {
@@ -338,11 +320,8 @@ var Utils = {
           }
           
           localStorage.setItem(storageKey, JSON.stringify(updated));
-      } catch (e) {
-          // Continue silently
-      }
+      } catch (e) {}
   },
-
 
   sendRequest: function(url, data, callback) {
       if (!url || typeof url !== 'string' || url.length === 0) {
@@ -358,49 +337,18 @@ var Utils = {
           }
       }, CONFIG.PIXEL_TIMEOUT);
 
-      // Try fetch first with standard mode
-      if (typeof fetch !== 'undefined') {
-          try {
-              var separator = url.indexOf('?') > -1 ? '&' : '?';
-              var fullUrl = url + separator + data;
-              
-
-              fetch(fullUrl, {
-                  method: 'GET',
-                  mode: 'cors', 
-                  cache: 'no-cache'
-              }).then(function() {
-                  if (!completed) {
-                      completed = true;
-                      clearTimeout(timeout);
-                      if (callback) callback(true);
-                  }
-              }).catch(function() {
-                  // Fallback to image pixel
-                  if (!completed) {
-                      Utils.sendImagePixel(url, data, callback, completed, timeout);
-                  }
-              });
-              return;
-          } catch (e) {
-              // Continue to fallback
-          }
-      }
-
-      // Fallback to standard image pixel
       Utils.sendImagePixel(url, data, callback, completed, timeout);
   },
-
 
   sendImagePixel: function(url, data, callback, completed, timeout) {
       if (completed) return;
 
       try {
           var separator = url.indexOf('?') > -1 ? '&' : '?';
-          var fullUrl = url + separator + data;
+          var fullUrl = url + separator + data + '&t=' + Date.now();
           
-
           var img = new Image();
+          
           img.onload = img.onerror = function() {
               if (!completed) {
                   completed = true;
@@ -409,16 +357,13 @@ var Utils = {
               }
           };
           
-
-          img.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px;top:-9999px;';
-          img.alt = 'Tracking Pixel'; 
+          img.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px;top:-9999px;visibility:hidden;';
+          img.alt = '';
+          img.setAttribute('aria-hidden', 'true');
           img.src = fullUrl;
           
-          // Add to DOM for transparency
           if (document.body) {
               document.body.appendChild(img);
-              
-              // Cleanup after 10 seconds
               setTimeout(function() {
                   try {
                       if (img.parentNode) {
@@ -463,13 +408,10 @@ var Utils = {
               }
           }
           localStorage.setItem(storageKey, JSON.stringify(stored));
-      } catch (e) {
-          // Continue silently
-      }
+      } catch (e) {}
   }
 };
 
-// MAIN TRACKING FUNCTION (Logic unchanged)
 window.createPixel = function() {
   if (!window.TRACKING_URL) return;
 
@@ -562,14 +504,12 @@ window.createPixel = function() {
   Utils.sendTrackingPixel(window.TRACKING_URL, urlString, false);
 };
 
-
 setTimeout(function() {
   if (!window.trackingCallback) {
       window.createPixel();
   }
 }, 100);
 
-// Event listeners (unchanged)
 window.addEventListener('online', Utils.sendStoredData);
 document.addEventListener('visibilitychange', function() {
   if (document.visibilityState === 'visible') {
@@ -585,7 +525,6 @@ if (document.readyState === 'loading') {
 
 })(window, document);
 
-// PARAMETER FORWARDING (Logic unchanged)
 function getAllURLParameters() {
   const params = new URLSearchParams(window.location.search);
   return params;
@@ -624,12 +563,9 @@ function appendParametersToAllLinks() {
               
               link.href = url.toString();
           }
-      } catch (e) {
-          // Skip invalid URLs
-      }
+      } catch (e) {}
   });
 }
-
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', function() {
@@ -638,7 +574,6 @@ if (document.readyState === 'loading') {
 } else {
   setTimeout(appendParametersToAllLinks, 100);
 }
-
 
 var observerTimeout;
 var observer = new MutationObserver(function(mutations) {
