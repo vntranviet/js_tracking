@@ -2,7 +2,7 @@
  * @version V10h.250720
  */
 
- /** Session Persistent Traffic Detection - CHỈ FIX 2 LỖI JSON + SESSIONSTORAGE */
+ /** Clickdid */
 (function() {
   if (window.CLICKID) return;
   
