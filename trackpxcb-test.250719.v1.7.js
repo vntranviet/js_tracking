@@ -2,125 +2,125 @@
  * @version V10h.250720
  */
 
- /** Session Persistent Traffic Detection - No Cookie, Use SessionStorage */
+ /** Session Persistent Traffic Detection - Optimized */
 (function() {
   if (window.CLICKID) return;
   
+  // Safe helpers (compact)
+  const safe = {
+    storage: (action, key, val) => {
+      try { return sessionStorage[action](key, val); } 
+      catch(e) { return action === 'getItem' ? null : false; }
+    },
+    json: (action, data) => {
+      try { return JSON[action](data); } 
+      catch(e) { return null; }
+    }
+  };
+  
   try {
-    // Priority 1: Existing clickid from URL
     const url = new URL(location.href);
     let clickId = url.searchParams.get('clickid');
     
+    // Priority 1: URL clickid
     if (clickId) {
       window.CLICKID = clickId;
-      // Save to session for next pages
-      sessionStorage.setItem('clickid', clickId);
-      console.log('📌 Using URL clickid:', clickId);
+      safe.storage('setItem', 'clickid', clickId);
+      console.log('📌 URL clickid:', clickId);
       return;
     }
     
-    // Priority 2: SessionStorage (persist trong session)
-    clickId = sessionStorage.getItem('clickid');
+    // Priority 2: Session clickid
+    clickId = safe.storage('getItem', 'clickid');
     if (clickId) {
       window.CLICKID = clickId;
-      // Add to URL for tracking
       url.searchParams.set('clickid', clickId);
       url.searchParams.set('utm_content', clickId);
       history.replaceState?.(null, '', url);
-      console.log('🔄 Using session clickid:', clickId);
+      console.log('🔄 Session clickid:', clickId);
       return;
     }
     
-    // Priority 3: Generate NEW (chỉ lần đầu trong session)
+    // Priority 3: Generate NEW
     const params = url.searchParams;
     const ref = document.referrer;
     
-    // Traffic detection - CHỈ CHẠY LAN ĐẦU
+    // Traffic detection (compact)
     const source = 
-      // Taboola
-      (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
-      // Google Ads  
-      (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
-      // YouTube
-      (params.get('utm_source')?.match(/^(ytb|yt|youtube)/) || ref.includes('youtube.com')) ? 'ytb' :
-      // Facebook
+      (params.get('utm_source') === 'tbl' || params.get('tblci')) ? 'tbl' :
+      (params.get('gclid') || params.get('utm_source')?.startsWith('ga')) ? 'ga' :
+      (params.get('utm_source')?.includes('youtube') || ref.includes('youtube.com')) ? 'ytb' :
       (params.get('fbclid') || params.get('utm_source')?.includes('facebook')) ? 'fb' :
-      // TikTok
       (params.get('ttclid') || params.get('utm_source')?.includes('tiktok')) ? 'tt' :
-      // Bing
       (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' :
-      // Email
-      (params.get('utm_medium') === 'email' || params.get('utm_source')?.includes('email') || params.get('utm_source') === 'mail') ? 'mail' :
-      // Direct/Organic
-      'dr';
+      (params.get('utm_medium') === 'email') ? 'mail' : 'dr';
     
-    // Generate FIRST-TIME clickid
+    // Generate clickid (compact)
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
-                String(now.getMonth() + 1).padStart(2, '0') + 
-                String(now.getDate()).padStart(2, '0');
-    const time = String(now.getHours()).padStart(2, '0') + 
-                String(now.getMinutes()).padStart(2, '0') + 
-                String(now.getSeconds()).padStart(2, '0');
-    const random = Math.random().toString(36).substr(2, 5);
+                (now.getMonth() + 1 + '').padStart(2, '0') + 
+                (now.getDate() + '').padStart(2, '0');
+    const time = (now.getHours() + '').padStart(2, '0') + 
+                (now.getMinutes() + '').padStart(2, '0');
+    const random = Math.random().toString(36).substr(2, 4);
     
     clickId = `clickid${date}-${time}${source}-${random}`;
     
-    // Save everywhere
+    // Save & update
     window.CLICKID = clickId;
-    sessionStorage.setItem('clickid', clickId);
-    
-    // Update URL
+    safe.storage('setItem', 'clickid', clickId);
     url.searchParams.set('clickid', clickId);
     url.searchParams.set('utm_content', clickId);
     history.replaceState?.(null, '', url);
     
-    // Traffic info - CHỈ LƯU LAN ĐẦU
-    const trafficInfo = {
-      clickId: clickId,
-      source: source,
+    // Traffic info (compact)
+    const info = {
+      clickId, source, 
       timestamp: now.toISOString(),
       referrer: ref || 'direct',
-      userAgent: navigator.userAgent,
-      originalUrl: location.href,
-      isFirstVisit: true
+      originalUrl: location.href
     };
     
-    window.TRAFFIC_INFO = trafficInfo;
-    sessionStorage.setItem('traffic_info', JSON.stringify(trafficInfo));
+    window.TRAFFIC_INFO = info;
+    const infoStr = safe.json('stringify', info);
+    if (infoStr) safe.storage('setItem', 'traffic_info', infoStr);
     
-    console.log('🆕 Generated NEW clickid:', clickId, '| Source:', source);
+    console.log('🆕 NEW clickid:', clickId, '| Source:', source);
     
   } catch (e) {
     // Fallback
     const fallbackId = 'clickid' + Date.now().toString(36);
     window.CLICKID = fallbackId;
-    sessionStorage.setItem('clickid', fallbackId);
-    console.log('⚠️ Fallback clickid:', fallbackId);
+    safe.storage('setItem', 'clickid', fallbackId);
+    console.log('⚠️ Fallback:', fallbackId);
   }
 })();
 
-// Enhanced helper function
-window.getTrafficInfo = function() {
-  const storedInfo = sessionStorage.getItem('traffic_info');
+// Helper functions (compact)
+window.getTrafficInfo = () => {
+  const safe = {
+    storage: key => { try { return sessionStorage.getItem(key); } catch(e) { return null; }},
+    json: data => { try { return JSON.parse(data); } catch(e) { return null; }}
+  };
+  
+  const stored = safe.json(safe.storage('traffic_info'));
   return {
     clickId: window.CLICKID,
-    trafficInfo: storedInfo ? JSON.parse(storedInfo) : window.TRAFFIC_INFO,
+    trafficInfo: stored || window.TRAFFIC_INFO,
     currentUrl: location.href,
-    sessionTime: new Date().toISOString(),
-    isNewPage: !window.TRAFFIC_INFO && !!storedInfo
+    sessionTime: new Date().toISOString()
   };
 };
 
-// Clear session data when needed
-window.clearTrafficSession = function() {
-  sessionStorage.removeItem('clickid');
-  sessionStorage.removeItem('traffic_info');
+window.clearTrafficSession = () => {
+  try { 
+    sessionStorage.removeItem('clickid');
+    sessionStorage.removeItem('traffic_info');
+  } catch(e) {}
   delete window.CLICKID;
   delete window.TRAFFIC_INFO;
-  console.log('🧹 Traffic session cleared');
+  console.log('🧹 Session cleared');
 };
-
   
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
