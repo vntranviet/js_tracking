@@ -1,50 +1,185 @@
 /**
- * @version V3.850.250720
+ * @version V3.12.250720
  */
 
  /** Random utm_content=clickidyymmdd-hhmmssxxxxxx */
 (function() {
-// Prevent multiple runs
-if (window.CLICK_ID) return;
-
-try {
-  const url = new URL(location.href);
-  const existing = url.searchParams.get('click_id');
+  if (window.CLICKID) return;
   
-  // Use existing or create new
-  if (existing) {
-      window.CLICK_ID = existing;
+  // Safe SessionStorage Helper
+  function safeSessionGet(key) {
+    try {
+      return sessionStorage.getItem(key);
+    } catch(e) {
+      return null;
+    }
+  }
+  
+  function safeSessionSet(key, value) {
+    try {
+      sessionStorage.setItem(key, value);
+      return true;
+    } catch(e) {
+      return false;
+    }
+  }
+  
+  function safeSessionRemove(key) {
+    try {
+      sessionStorage.removeItem(key);
+    } catch(e) {
+      // Silent fail
+    }
+  }
+  
+  // Safe JSON Helper
+  function safeJSONParse(str) {
+    if (!str) return null;
+    try {
+      return JSON.parse(str);
+    } catch(e) {
+      return null;
+    }
+  }
+  
+  function safeJSONStringify(obj) {
+    try {
+      return JSON.stringify(obj);
+    } catch(e) {
+      return null;
+    }
+  }
+  
+  try {
+    // Priority 1: Existing clickid from URL
+    const url = new URL(location.href);
+    let clickId = url.searchParams.get('clickid');
+    
+    if (clickId) {
+      window.CLICKID = clickId;
+      safeSessionSet('clickid', clickId);
       return;
+    }
+    
+    // Priority 2: SessionStorage
+    const storedClickId = safeSessionGet('clickid');
+    if (storedClickId) {
+      window.CLICKID = storedClickId;
+      // Add to URL for tracking
+      url.searchParams.set('clickid', storedClickId);
+      url.searchParams.set('utm_content', storedClickId);
+      history.replaceState?.(null, '', url);
+      return;
+    }
+    
+    // Priority 3: Generate NEW (chỉ lần đầu trong session)
+    const params = url.searchParams;
+    const ref = document.referrer;
+    
+    // Traffic detection
+    const source = 
+      // Taboola
+      (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
+      // Google Ads  
+      (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
+      // YouTube
+      (params.get('utm_source')?.match(/^(ytb|yt|youtube)/) || ref.includes('youtube.com')) ? 'ytb' :
+      // Facebook
+      (params.get('fbclid') || params.get('utm_source')?.includes('facebook')) ? 'fb' :
+      // TikTok
+      (params.get('ttclid') || params.get('utm_source')?.includes('tiktok')) ? 'tt' :
+      // Bing
+      (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' :
+      // Email
+      (params.get('utm_medium') === 'email' || params.get('utm_source')?.includes('email') || params.get('utm_source') === 'mail') ? 'mail' :
+      // Direct/Organic
+      'dr';
+    
+    // Generate FIRST-TIME clickid
+    const now = new Date();
+    const date = now.getFullYear().toString().slice(-2) + 
+                String(now.getMonth() + 1).padStart(2, '0') + 
+                String(now.getDate()).padStart(2, '0');
+    const time = String(now.getHours()).padStart(2, '0') + 
+                String(now.getMinutes()).padStart(2, '0') + 
+                String(now.getSeconds()).padStart(2, '0');
+    const random = Math.random().toString(36).substr(2, 5);
+    
+    clickId = `clickid${date}-${time}${source}-${random}`;
+    
+    // Save everywhere
+    window.CLICKID = clickId;
+    safeSessionSet('clickid', clickId);
+    
+    // Update URL
+    url.searchParams.set('clickid', clickId);
+    url.searchParams.set('utm_content', clickId);
+    history.replaceState?.(null, '', url);
+    
+    // Traffic info - CHỈ LƯU LAN ĐẦU
+    const trafficInfo = {
+      clickId: clickId,
+      source: source,
+      timestamp: now.toISOString(),
+      referrer: ref || 'direct',
+      userAgent: navigator.userAgent,
+      originalUrl: location.href,
+      isFirstVisit: true
+    };
+    
+    window.TRAFFIC_INFO = trafficInfo;
+    const trafficInfoStr = safeJSONStringify(trafficInfo);
+    if (trafficInfoStr) {
+      safeSessionSet('traffic_info', trafficInfoStr);
+    }
+    
+  } catch (e) {
+    // Ultimate fallback
+    const fallbackId = 'clickid' + Date.now().toString(36);
+    window.CLICKID = fallbackId;
+    safeSessionSet('clickid', fallbackId);
   }
-  
-  // Create new click ID: clickidYYMMDD-HHMMSSxxxxxx
-  const now = new Date();
-  const date = now.getFullYear().toString().slice(-2) + 
-              (now.getMonth() + 1).toString().padStart(2, '0') + 
-              now.getDate().toString().padStart(2, '0');
-  const time = now.getHours().toString().padStart(2, '0') + 
-              now.getMinutes().toString().padStart(2, '0') + 
-              now.getSeconds().toString().padStart(2, '0');
-  const random = Math.random().toString(36).substr(2, 6);
-  
-  const clickId = `clickid${date}-${time}${random}`;
-  
-  // Update URL silently (no page reload)
-  url.searchParams.set('click_id', clickId);
-  url.searchParams.set('utm_content', clickId);
-  
-  // Modern browsers: Silent update
-  if (history.replaceState) {
-      history.replaceState(null, '', url.toString());
-  }
-  
-  window.CLICK_ID = clickId;
-  
-} catch (e) {
-  // Fallback: Basic click ID
-  window.CLICK_ID = 'clickid' + Date.now().toString(36);
-}
 })();
+
+// Enhanced helper function
+window.getTrafficInfo = function() {
+  const storedInfo = safeSessionGet('traffic_info');
+  const parsedInfo = safeJSONParse(storedInfo);
+  
+  return {
+    clickId: window.CLICKID,
+    trafficInfo: parsedInfo || window.TRAFFIC_INFO,
+    currentUrl: location.href,
+    sessionTime: new Date().toISOString(),
+    isNewPage: !window.TRAFFIC_INFO && !!parsedInfo
+  };
+};
+
+// Clear session data when needed
+window.clearTrafficSession = function() {
+  safeSessionRemove('clickid');
+  safeSessionRemove('traffic_info');
+  delete window.CLICKID;
+  delete window.TRAFFIC_INFO;
+};
+
+// Safe helper functions
+function safeSessionGet(key) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch(e) {
+    return null;
+  }
+}
+
+function safeJSONParse(str) {
+  if (!str) return null;
+  try {
+    return JSON.parse(str);
+  } catch(e) {
+    return null;
+  }
+}
 
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
