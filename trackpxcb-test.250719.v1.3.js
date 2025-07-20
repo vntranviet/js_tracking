@@ -2,7 +2,9 @@
  * @version V80h.250720
  */
 
-/** Random utm_content=clickidyymmdd-hhmmssxxxxxx */
+  
+
+  /** Random utm_content=clickidyymmdd-hhmmssxxxxxx */
 (function() {
 // Prevent multiple runs
 if (window.CLICK_ID) return;
@@ -45,6 +47,7 @@ try {
   window.CLICK_ID = 'clickid' + Date.now().toString(36);
 }
 })();
+  
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
 (function TrackingInit(window, document) {
