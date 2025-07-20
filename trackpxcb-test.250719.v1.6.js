@@ -2,66 +2,45 @@
  * @version V10h.250720
  */
 
-  /** Fixed Optimized Traffic Detection with Cookie Storage */
+ /** Real-Time Traffic Detection  */
 (function() {
   if (window.CLICKID) return;
   
   try {
-    // Cookie utils - FIXED
-    const setCookie = (name, value, days = 30) => {
-      const expires = new Date(Date.now() + days * 864e5).toUTCString();
-      const domain = location.hostname.replace(/^www\./, '');
-      document.cookie = `${name}=${value}; expires=${expires}; path=/; domain=.${domain}; SameSite=Lax; Secure`;
-    };
-    
-    const getCookie = name => {
-      const nameEQ = name + "=";
-      const ca = document.cookie.split(';');
-      for (let i = 0; i < ca.length; i++) {
-        let c = ca[i].trim(); // FIXED: Added trim()
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length);
-      }
-      return null;
-    };
-    
-    // Priority 1: Cookie
-    let clickId = getCookie('clickid');
-    if (clickId) {
-      window.CLICKID = clickId;
-      const url = new URL(location.href);
-      if (!url.searchParams.get('clickid')) {
-        url.searchParams.set('clickid', clickId);
-        url.searchParams.set('utm_content', clickId);
-        history.replaceState?.(null, '', url);
-      }
-      console.log('Using cookie clickid:', clickId);
-      return;
-    }
-    
-    // Priority 2: URL
+    // Priority 1: URL parameter clickid
     const url = new URL(location.href);
-    clickId = url.searchParams.get('clickid');
+    let clickId = url.searchParams.get('clickid');
+    
     if (clickId) {
       window.CLICKID = clickId;
-      setCookie('clickid', clickId);
-      console.log('Using URL clickid:', clickId);
+      console.log('Using existing URL clickid:', clickId);
       return;
     }
     
-    // Priority 3: Generate new
+    // Priority 2: Real-time detection & generation
     const params = url.searchParams;
     const ref = document.referrer;
     
-    // Traffic detection
+    // Enhanced traffic detection with email + direct as "dr"
     const source = 
+      // Taboola
       (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
+      // Google Ads
       (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
+      // YouTube
       (params.get('utm_source')?.match(/^(ytb|yt|youtube)/) || ref.includes('youtube.com')) ? 'ytb' :
+      // Facebook
       (params.get('fbclid') || params.get('utm_source')?.includes('facebook')) ? 'fb' :
+      // TikTok
       (params.get('ttclid') || params.get('utm_source')?.includes('tiktok')) ? 'tt' :
-      (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' : '';
+      // Bing
+      (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' :
+      // Email detection
+      (params.get('utm_medium') === 'email' || params.get('utm_source')?.includes('email') || params.get('utm_source') === 'mail') ? 'mail' :
+      // Direct/Organic
+      'dr';
     
-    // Generate ID - FIXED format
+    // Generate real-time clickid: clickidYYMMDD-HHMMSSsource-xxxxx
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
                 String(now.getMonth() + 1).padStart(2, '0') + 
@@ -71,32 +50,63 @@
                 String(now.getSeconds()).padStart(2, '0');
     const random = Math.random().toString(36).substr(2, 5);
     
-    // FIXED: Proper format handling
-    clickId = source ? 
-              `clickid${date}-${time}${source}-${random}` : 
-              `clickid${date}-${time}-${random}`;
+    // Format: clickid250720-143052dr-abc12
+    clickId = `clickid${date}-${time}${source}-${random}`;
     
-    // Save everywhere
+    // Save to window only (no cookie)
     window.CLICKID = clickId;
-    setCookie('clickid', clickId);
+    
+    // Update URL with new clickid for tracking
     url.searchParams.set('clickid', clickId);
     url.searchParams.set('utm_content', clickId);
     history.replaceState?.(null, '', url);
     
-    console.log('Generated clickid:', clickId, '| Source:', source || 'direct');
+    // Real-time traffic info
+    const trafficInfo = {
+      clickId: clickId,
+      source: source,
+      timestamp: now.toISOString(),
+      referrer: ref || 'direct',
+      userAgent: navigator.userAgent,
+      url: location.href
+    };
+    
+    // Store traffic info globally
+    window.TRAFFIC_INFO = trafficInfo;
+    
+    console.log('🎯 Real-time Traffic Detection:', trafficInfo);
+    
+    // Optional: Send to analytics immediately
+    if (typeof gtag !== 'undefined') {
+      gtag('event', 'traffic_detected', {
+        'custom_parameter_1': source,
+        'custom_parameter_2': clickId
+      });
+    }
     
   } catch (e) {
-    // Enhanced fallback
+    // Simple fallback
     const fallbackId = 'clickid' + Date.now().toString(36);
     window.CLICKID = fallbackId;
-    try {
-      setCookie('clickid', fallbackId);
-    } catch (cookieErr) {
-      console.warn('Cookie save failed');
-    }
-    console.log('Fallback clickid:', fallbackId);
+    window.TRAFFIC_INFO = {
+      clickId: fallbackId,
+      source: 'fallback',
+      timestamp: new Date().toISOString(),
+      error: e.message
+    };
+    console.log('⚠️ Fallback clickid:', fallbackId);
   }
 })();
+
+// Helper function to get current traffic info
+window.getTrafficInfo = function() {
+  return {
+    clickId: window.CLICKID,
+    trafficInfo: window.TRAFFIC_INFO,
+    currentUrl: location.href,
+    sessionTime: new Date().toISOString()
+  };
+};
 
   
 
