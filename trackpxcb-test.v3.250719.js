@@ -2,7 +2,7 @@
  * @version V22h.250719
  */
 
-/** Random utm_content=clickidyymmdd-hhmmssabc */
+/** Random utm_content=clickidyymmdd-hhmmss.xxxxx */
 (function() {
 // Prevent multiple runs
 if (window.CLICK_ID) return;
@@ -17,7 +17,7 @@ try {
         return;
     }
     
-    // Create new click ID: clickidYYMMDD-HHMMSSxxx
+    // Create new click ID: clickidYYMMDD-HHMMSS.xxxxx
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
                 (now.getMonth() + 1).toString().padStart(2, '0') + 
@@ -25,9 +25,9 @@ try {
     const time = now.getHours().toString().padStart(2, '0') + 
                 now.getMinutes().toString().padStart(2, '0') + 
                 now.getSeconds().toString().padStart(2, '0');
-    const random = Math.random().toString(36).substr(2, 3);
+    const random = Math.random().toString(36).substr(2, 6);
     
-    const clickId = `clickid${date}-${time}${random}`;
+    const clickId = `clickid${date}-${time}.${random}`;
     
     // Update URL silently (no page reload)
     url.searchParams.set('click_id', clickId);
@@ -45,6 +45,7 @@ try {
     window.CLICK_ID = 'clickid' + Date.now().toString(36);
 }
 })();
+
 
 /** @Tracking Pixel STEALTH MODE - ANTI ADBLOCK */
 (function TrackingInit(window, document) {
