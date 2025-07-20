@@ -3,7 +3,7 @@ const fileInfo = {
     username: 'vntranviet',
     repo: 'js_tracking',
     branch: 'main',
-    file: 'track_px_cb.js'
+    file: 'cbpx-v3.js'
 };
 
 // Hàm clear cache và reload script
