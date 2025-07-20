@@ -1,7 +1,11 @@
 /**
- * @version V13h.250720
+ * @version V10h.250720
  */
 
+/**
+ * COMPLIANT TRACKING CODE - Keep History Manipulation
+ * @version V3.12.250720-COMPLIANT-KEEP-HISTORY
+ */
 
 (function() {
 if (window.CLICKID) return;
