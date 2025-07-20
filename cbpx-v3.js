@@ -57,7 +57,7 @@ try {
   // Priority 1: URL clickid
   if (clickId) {
     window.CLICKID = clickId;
-    safeSessionSet('tracking_clickid', clickId); /
+    safeSessionSet('tracking_clickid', clickId); 
     return;
   }
   
