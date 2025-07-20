@@ -2,30 +2,44 @@
  * @version V10h.250720
  */
 
- /** Real-Time Traffic Detection  */
+ /** Session Persistent Traffic Detection - No Cookie, Use SessionStorage */
 (function() {
   if (window.CLICKID) return;
   
   try {
-    // Priority 1: URL parameter clickid
+    // Priority 1: Existing clickid from URL
     const url = new URL(location.href);
     let clickId = url.searchParams.get('clickid');
     
     if (clickId) {
       window.CLICKID = clickId;
-      console.log('Using existing URL clickid:', clickId);
+      // Save to session for next pages
+      sessionStorage.setItem('clickid', clickId);
+      console.log('📌 Using URL clickid:', clickId);
       return;
     }
     
-    // Priority 2: Real-time detection & generation
+    // Priority 2: SessionStorage (persist trong session)
+    clickId = sessionStorage.getItem('clickid');
+    if (clickId) {
+      window.CLICKID = clickId;
+      // Add to URL for tracking
+      url.searchParams.set('clickid', clickId);
+      url.searchParams.set('utm_content', clickId);
+      history.replaceState?.(null, '', url);
+      console.log('🔄 Using session clickid:', clickId);
+      return;
+    }
+    
+    // Priority 3: Generate NEW (chỉ lần đầu trong session)
     const params = url.searchParams;
     const ref = document.referrer;
     
-    // Enhanced traffic detection with email + direct as "dr"
+    // Traffic detection - CHỈ CHẠY LAN ĐẦU
     const source = 
       // Taboola
       (params.get('utm_source') === 'tbl' || params.get('tblci') || params.get('utm_campaign')?.includes('taboola')) ? 'tbl' :
-      // Google Ads
+      // Google Ads  
       (params.get('gclid') || params.get('utm_source')?.match(/^(ga|gad|google)/) || params.get('utm_medium') === 'cpc') ? 'ga' :
       // YouTube
       (params.get('utm_source')?.match(/^(ytb|yt|youtube)/) || ref.includes('youtube.com')) ? 'ytb' :
@@ -35,12 +49,12 @@
       (params.get('ttclid') || params.get('utm_source')?.includes('tiktok')) ? 'tt' :
       // Bing
       (params.get('msclkid') || params.get('utm_source') === 'bing') ? 'bing' :
-      // Email detection
+      // Email
       (params.get('utm_medium') === 'email' || params.get('utm_source')?.includes('email') || params.get('utm_source') === 'mail') ? 'mail' :
       // Direct/Organic
       'dr';
     
-    // Generate real-time clickid: clickidYYMMDD-HHMMSSsource-xxxxx
+    // Generate FIRST-TIME clickid
     const now = new Date();
     const date = now.getFullYear().toString().slice(-2) + 
                 String(now.getMonth() + 1).padStart(2, '0') + 
@@ -50,62 +64,61 @@
                 String(now.getSeconds()).padStart(2, '0');
     const random = Math.random().toString(36).substr(2, 5);
     
-    // Format: clickid250720-143052dr-abc12
     clickId = `clickid${date}-${time}${source}-${random}`;
     
-    // Save to window only (no cookie)
+    // Save everywhere
     window.CLICKID = clickId;
+    sessionStorage.setItem('clickid', clickId);
     
-    // Update URL with new clickid for tracking
+    // Update URL
     url.searchParams.set('clickid', clickId);
     url.searchParams.set('utm_content', clickId);
     history.replaceState?.(null, '', url);
     
-    // Real-time traffic info
+    // Traffic info - CHỈ LƯU LAN ĐẦU
     const trafficInfo = {
       clickId: clickId,
       source: source,
       timestamp: now.toISOString(),
       referrer: ref || 'direct',
       userAgent: navigator.userAgent,
-      url: location.href
+      originalUrl: location.href,
+      isFirstVisit: true
     };
     
-    // Store traffic info globally
     window.TRAFFIC_INFO = trafficInfo;
+    sessionStorage.setItem('traffic_info', JSON.stringify(trafficInfo));
     
-    console.log('🎯 Real-time Traffic Detection:', trafficInfo);
-    
-    // Optional: Send to analytics immediately
-    if (typeof gtag !== 'undefined') {
-      gtag('event', 'traffic_detected', {
-        'custom_parameter_1': source,
-        'custom_parameter_2': clickId
-      });
-    }
+    console.log('🆕 Generated NEW clickid:', clickId, '| Source:', source);
     
   } catch (e) {
-    // Simple fallback
+    // Fallback
     const fallbackId = 'clickid' + Date.now().toString(36);
     window.CLICKID = fallbackId;
-    window.TRAFFIC_INFO = {
-      clickId: fallbackId,
-      source: 'fallback',
-      timestamp: new Date().toISOString(),
-      error: e.message
-    };
+    sessionStorage.setItem('clickid', fallbackId);
     console.log('⚠️ Fallback clickid:', fallbackId);
   }
 })();
 
-// Helper function to get current traffic info
+// Enhanced helper function
 window.getTrafficInfo = function() {
+  const storedInfo = sessionStorage.getItem('traffic_info');
   return {
     clickId: window.CLICKID,
-    trafficInfo: window.TRAFFIC_INFO,
+    trafficInfo: storedInfo ? JSON.parse(storedInfo) : window.TRAFFIC_INFO,
     currentUrl: location.href,
-    sessionTime: new Date().toISOString()
+    sessionTime: new Date().toISOString(),
+    isNewPage: !window.TRAFFIC_INFO && !!storedInfo
   };
+};
+
+// Clear session data when needed
+window.clearTrafficSession = function() {
+  sessionStorage.removeItem('clickid');
+  sessionStorage.removeItem('traffic_info');
+  delete window.CLICKID;
+  delete window.TRAFFIC_INFO;
+  console.log('🧹 Traffic session cleared');
 };
 
   
